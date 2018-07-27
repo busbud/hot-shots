@@ -6,8 +6,7 @@
   "types": "./types.d.ts",
   "contributors": [
     "Russ Bradberry <rbradberry@gmail.com>",
-    "Brian Deitte <bdeitte@gmail.com>",
-    "Mikhail Mazurskiy <mikhail.mazursky@gmail.com>"
+    "Brian Deitte <bdeitte@gmail.com>"
   ],
   "keywords": [
     "statsd",
@@ -27,7 +26,7 @@
     "lib": "./lib/"
   },
   "engines": {
-    "node": ">=0.8.0"
+    "node": ">=6.0.0"
   },
   "scripts": {
     "coverage": "nyc --reporter=lcov npm test",

@@ -24,7 +24,7 @@ module.exports = function runCheckTestSuite() {
           it('should send proper check format for name and status', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               statsd.check('check.name', statsd.CHECKS.OK);
@@ -39,7 +39,7 @@ module.exports = function runCheckTestSuite() {
           it('should send proper check format for name and status with global prefix and suffix', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 prefix: 'prefix.',
                 suffix: '.suffix'
@@ -58,7 +58,7 @@ module.exports = function runCheckTestSuite() {
             server = createUDPServer(function (address) {
               var options;
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               options = {
@@ -81,7 +81,7 @@ module.exports = function runCheckTestSuite() {
             server = createUDPServer(function (address) {
               var options;
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               options = {
@@ -100,7 +100,7 @@ module.exports = function runCheckTestSuite() {
             var called = false;
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar'], function () {
@@ -152,23 +152,23 @@ module.exports = function runCheckTestSuite() {
           it('should throw an exception when using telegraf format', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 telegraf: true
               }, index);
-              assert.throws(function () {
-                statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
-              }, function (err) {
-                server.close();
-                done();
-              });
+            });
+            assert.throws(function () {
+              statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
+            }, function (err) {
+              server.close();
+              done();
             });
           });
 
           it('should use errorHandler', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 telegraf: true,
                 errorHandler: function () {
@@ -184,7 +184,7 @@ module.exports = function runCheckTestSuite() {
           it('should send proper check format for name and status', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -200,7 +200,7 @@ module.exports = function runCheckTestSuite() {
           it('should send proper check format for name and status with global prefix and suffix', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 prefix: 'prefix.',
                 suffix: '.suffix',
@@ -220,7 +220,7 @@ module.exports = function runCheckTestSuite() {
             server = createTCPServer(function (address) {
               var options;
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -244,7 +244,7 @@ module.exports = function runCheckTestSuite() {
             server = createTCPServer(function (address) {
               var options;
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -264,7 +264,7 @@ module.exports = function runCheckTestSuite() {
             var called = false;
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -319,27 +319,27 @@ module.exports = function runCheckTestSuite() {
             });
           });
 
-          it('should throw an exception when using telegraf format', function (done) {
+          it.only('should throw an exception when using telegraf format', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 telegraf: true,
                 protocol: 'tcp'
               }, index);
-              assert.throws(function () {
-                statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
-              }, function (err) {
-                server.close();
-                done();
-              });
+            });
+            assert.throws(function () {
+              statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
+            }, function (err) {
+              server.close();
+              done();
             });
           });
 
           it('should use errorHandler', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 telegraf: true,
                 protocol: 'tcp',
