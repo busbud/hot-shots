@@ -36,8 +36,8 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "jshint": "^2.9.5",
-    "mocha": "^5.2.0",
+    "jshint": "2.9.x",
+    "mocha": "5.2.x",
     "nyc": "11.x"
   },
   "license": "MIT"
