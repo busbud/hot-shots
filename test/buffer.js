@@ -137,7 +137,7 @@ module.exports = function runBufferTestSuite() {
             });
           });
 
-          it.skip('should not send batches larger then maxBufferSize', function (done) {
+          it('should not send batches larger then maxBufferSize', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
                 host: address.address,

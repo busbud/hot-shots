@@ -1,17 +1,28 @@
 'use strict';
 
-var assert = require('assert');
-var dgram = require('dgram');
-var net = require('net');
+const assert = require('assert');
+const dgram = require('dgram');
+const net = require('net');
 
-var createStatsdClient = require('./helpers').createStatsdClient;
-var createTCPServer = require('./helpers').createTCPServer;
-var createUDPServer = require('./helpers').createUDPServer;
+const createStatsdClient = require('./helpers').createStatsdClient;
+const createTCPServer = require('./helpers').createTCPServer;
+const createUDPServer = require('./helpers').createUDPServer;
 
 module.exports = function runCheckTestSuite() {
   describe('#check', function () {
-    var server;
-    var statsd;
+    let server;
+    let statsd;
+
+    afterEach(function () {
+      try {
+        server.close();
+      }
+      catch(err) {
+        // ignoring
+      }
+      server = null;
+      statsd = null;
+    });
 
     ['main client', 'child client', 'child of child client'].forEach(function (description, index) {
       describe(description, function () {
@@ -26,7 +37,6 @@ module.exports = function runCheckTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_sc|check.name|0');
-              server.close();
               done();
             });
           });
@@ -43,15 +53,14 @@ module.exports = function runCheckTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_sc|prefix.check.name.suffix|0');
-              server.close();
               done();
             });
           });
 
           it('should send proper check format for name, status, and options', function (done) {
-            var date = new Date();
+            let date = new Date();
             server = createUDPServer(function (address) {
-              var options;
+              let options;
               statsd = createStatsdClient({
                 host: address.address,
                 port: address.port
@@ -67,14 +76,13 @@ module.exports = function runCheckTestSuite() {
               assert.equal(event, '_sc|check.name|1|d:' +
                 Math.round(date.getTime() / 1000) + '|h:host|m:message'
               );
-              server.close();
               done();
             });
           });
 
           it('should send proper check format for title, text, some options, and tags', function (done) {
             server = createUDPServer(function (address) {
-              var options;
+              let options;
               statsd = createStatsdClient({
                 host: address.address,
                 port: address.port
@@ -86,13 +94,12 @@ module.exports = function runCheckTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_e{10,12}:test title|another desc|h:host|#foo,bar');
-              server.close();
               done();
             });
           });
 
           it('should send proper check format for title, text, tags, and a callback', function (done) {
-            var called = false;
+            let called = false;
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
                 host: address.address,
@@ -105,13 +112,12 @@ module.exports = function runCheckTestSuite() {
             server.on('metrics', function (event) {
               assert.equal(event, '_sc|check.name|0|#foo,bar');
               assert.equal(called, true);
-              server.close();
               done();
             });
           });
 
           it('should send no event stat when a mock Client is used', function (done) {
-            var TEST_FINISHED_MESSAGE = 'TEST_FINISHED';
+            let TEST_FINISHED_MESSAGE = 'TEST_FINISHED';
             server = createUDPServer(function (address) {
               statsd = createStatsdClient([
                 address.address, address.port, 'prefix', 'suffix', false, false, true
@@ -122,8 +128,8 @@ module.exports = function runCheckTestSuite() {
               statsd.check('test', 1);
 
               statsd.check('test', 1, null, function (error, bytes) {
-                var socket = dgram.createSocket("udp4");
-                var buf = new Buffer(TEST_FINISHED_MESSAGE);
+                let socket = dgram.createSocket("udp4");
+                let buf = new Buffer(TEST_FINISHED_MESSAGE);
 
                 assert.ok(!error);
                 assert.equal(bytes, 0);
@@ -139,13 +145,12 @@ module.exports = function runCheckTestSuite() {
             server.on('metrics', function (message) {
               // We only expect to get our own test finished message, no stats
               assert.equal(message, TEST_FINISHED_MESSAGE);
-              server.close();
               done();
             });
           });
 
           it('should throw an exception when using telegraf format', function (done) {
-            server = createTCPServer(function (address) {
+            server = createUDPServer(function (address) {
               statsd = createStatsdClient({
                 host: address.address,
                 port: address.port,
@@ -154,7 +159,6 @@ module.exports = function runCheckTestSuite() {
               assert.throws(function () {
                 statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
               }, function (err) {
-                server.close();
                 done();
               });
             });
@@ -187,7 +191,6 @@ module.exports = function runCheckTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_sc|check.name|0\n');
-              server.close();
               done();
             });
           });
@@ -205,15 +208,14 @@ module.exports = function runCheckTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_sc|prefix.check.name.suffix|0\n');
-              server.close();
               done();
             });
           });
 
           it('should send proper check format for name, status, and options', function (done) {
-            var date = new Date();
+            let date = new Date();
             server = createTCPServer(function (address) {
-              var options;
+              let options;
               statsd = createStatsdClient({
                 host: address.address,
                 port: address.port,
@@ -230,14 +232,13 @@ module.exports = function runCheckTestSuite() {
               assert.equal(event, '_sc|check.name|1|d:' +
                 Math.round(date.getTime() / 1000) + '|h:host|m:message\n'
               );
-              server.close();
               done();
             });
           });
 
           it('should send proper check format for title, text, some options, and tags', function (done) {
             server = createTCPServer(function (address) {
-              var options;
+              let options;
               statsd = createStatsdClient({
                 host: address.address,
                 port: address.port,
@@ -250,13 +251,12 @@ module.exports = function runCheckTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_e{10,12}:test title|another desc|h:host|#foo,bar\n');
-              server.close();
               done();
             });
           });
 
           it('should send proper check format for title, text, tags, and a callback', function (done) {
-            var called = false;
+            let called = false;
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
                 host: address.address,
@@ -270,13 +270,12 @@ module.exports = function runCheckTestSuite() {
             server.on('metrics', function (event) {
               assert.equal(event, '_sc|check.name|0|#foo,bar\n');
               assert.equal(called, true);
-              server.close();
               done();
             });
           });
 
           it('should send no event stat when a mock Client is used', function (done) {
-            var TEST_FINISHED_MESSAGE = 'TEST_FINISHED';
+            let TEST_FINISHED_MESSAGE = 'TEST_FINISHED';
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
                 host: address.address,
@@ -292,8 +291,8 @@ module.exports = function runCheckTestSuite() {
               statsd.check('test', 1);
 
               statsd.check('test', 1, null, function (error, bytes) {
-                var socket = net.connect(address.port, address.address);
-                var buf = new Buffer(TEST_FINISHED_MESSAGE);
+                let socket = net.connect(address.port, address.address);
+                let buf = new Buffer(TEST_FINISHED_MESSAGE);
 
                 assert.ok(!error);
                 assert.equal(bytes, 0);
@@ -309,7 +308,6 @@ module.exports = function runCheckTestSuite() {
             server.on('metrics', function (message) {
               // We only expect to get our own test finished message, no stats
               assert.equal(message, TEST_FINISHED_MESSAGE);
-              server.close();
               done();
             });
           });
@@ -325,13 +323,16 @@ module.exports = function runCheckTestSuite() {
               assert.throws(function () {
                 statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
               }, function (err) {
-                server.close();
+                // need to set server to null early or have an errorHandler for the
+                // async TCP error on close
+                server = null;
                 done();
               });
             });
           });
 
           it('should use errorHandler', function (done) {
+            let calledDone = false;
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
                 host: address.address,
@@ -339,7 +340,10 @@ module.exports = function runCheckTestSuite() {
                 telegraf: true,
                 protocol: 'tcp',
                 errorHandler: function () {
-                  done();
+                  if (! calledDone) {
+                    calledDone = true;
+                    done();
+                  }
                 }
               }, index);
               statsd.check('check.name', statsd.CHECKS.OK);
