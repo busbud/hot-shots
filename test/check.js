@@ -13,11 +13,6 @@ module.exports = function runCheckTestSuite() {
     var server;
     var statsd;
 
-    afterEach(function () {
-      server = null;
-      statsd = null;
-    });
-
     ['main client', 'child client', 'child of child client'].forEach(function (description, index) {
       describe(description, function () {
         describe('UDP', function () {
@@ -150,18 +145,18 @@ module.exports = function runCheckTestSuite() {
           });
 
           it('should throw an exception when using telegraf format', function (done) {
-            server = createUDPServer(function (address) {
+            server = createTCPServer(function (address) {
               statsd = createStatsdClient({
                 host: address.address,
                 port: address.port,
-                telegraf: true
+                telegraf: true,
               }, index);
-            });
-            assert.throws(function () {
-              statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
-            }, function (err) {
-              server.close();
-              done();
+              assert.throws(function () {
+                statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
+              }, function (err) {
+                server.close();
+                done();
+              });
             });
           });
 
@@ -319,7 +314,7 @@ module.exports = function runCheckTestSuite() {
             });
           });
 
-          it.only('should throw an exception when using telegraf format', function (done) {
+          it('should throw an exception when using telegraf format', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
                 host: address.address,
@@ -327,12 +322,12 @@ module.exports = function runCheckTestSuite() {
                 telegraf: true,
                 protocol: 'tcp'
               }, index);
-            });
-            assert.throws(function () {
-              statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
-            }, function (err) {
-              server.close();
-              done();
+              assert.throws(function () {
+                statsd.check('check.name', statsd.CHECKS.OK, null, ['foo', 'bar']);
+              }, function (err) {
+                server.close();
+                done();
+              });
             });
           });
 
