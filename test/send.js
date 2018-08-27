@@ -5,6 +5,7 @@ var assert = require('assert');
 var createStatsdClient = require('./helpers').createStatsdClient;
 var createTCPServer = require('./helpers').createTCPServer;
 var createUDPServer = require('./helpers').createUDPServer;
+var closeAll = require('./helpers').closeAll;
 
 module.exports = function runSendAllMethodTestSuite() {
   describe('#send', function () {
@@ -12,8 +13,7 @@ module.exports = function runSendAllMethodTestSuite() {
     var statsd;
 
     afterEach(function () {
-      server = null;
-      statsd = null;
+      closeAll(server, statsd);
     });
 
     ['main client', 'child client', 'child of child client'].forEach(function (description, index) {
@@ -25,7 +25,6 @@ module.exports = function runSendAllMethodTestSuite() {
               statsd = createStatsdClient({
                 errorHandler: function (e) {
                   assert.equal(e, err);
-                  server.close();
                   done();
                 }
               }, index);
@@ -53,7 +52,6 @@ module.exports = function runSendAllMethodTestSuite() {
                 protocol: 'tcp',
                 errorHandler: function (e) {
                   assert.equal(e, err);
-                  server.close();
                   done();
                 }
               }, index);

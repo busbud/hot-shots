@@ -5,6 +5,20 @@ var net = require('net');
 
 var StatsD = require('../lib/statsd');
 
+function closeAll(server, statsd) {
+  try {
+    if (server) {
+      server.close();
+    }
+    if (statsd) {
+      statsd.close();
+    }
+  }
+  catch(err) {
+    // ignoring on purpose, given tests may put server/statsd in an odd state
+  }
+}
+
 function createStatsdClient(args, noOfChildren) {
   function construct(ctor, args) {
     function F() {
@@ -61,6 +75,7 @@ function createUDPServer(onListening){
 }
 
 module.exports = {
+  closeAll: closeAll,
   createStatsdClient: createStatsdClient,
   createTCPServer: createTCPServer,
   createUDPServer: createUDPServer

@@ -7,6 +7,7 @@ var net = require('net');
 var createStatsdClient = require('./helpers').createStatsdClient;
 var createTCPServer = require('./helpers').createTCPServer;
 var createUDPServer = require('./helpers').createUDPServer;
+var closeAll = require('./helpers').closeAll;
 
 module.exports = function runEventTestSuite() {
   describe('#event', function () {
@@ -14,8 +15,7 @@ module.exports = function runEventTestSuite() {
     var statsd;
 
     afterEach(function () {
-      server = null;
-      statsd = null;
+      closeAll(server, statsd);
     });
 
     ['main client', 'child client', 'child of child client'].forEach(function (description, index) {
@@ -24,14 +24,13 @@ module.exports = function runEventTestSuite() {
           it('should send proper event format for title and text', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               statsd.event('test', 'description');
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_e{4,11}:test|description');
-              server.close();
               done();
             });
           });
@@ -39,14 +38,13 @@ module.exports = function runEventTestSuite() {
           it('should reuse the title when when text is missing', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               statsd.event('test');
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_e{4,4}:test|test');
-              server.close();
               done();
             });
           });
@@ -56,7 +54,7 @@ module.exports = function runEventTestSuite() {
             server = createUDPServer(function (address) {
               var options;
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               options = {
@@ -73,7 +71,6 @@ module.exports = function runEventTestSuite() {
               assert.equal(event, '_e{10,31}:test title|another\\nmultiline\\ndescription|d:' +
                 Math.round(date.getTime() / 1000) + '|h:host|k:ag_key|p:low|s:source_type|t:warning'
               );
-              server.close();
               done();
             });
           });
@@ -82,7 +79,7 @@ module.exports = function runEventTestSuite() {
             server = createUDPServer(function (address) {
               var options;
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               options = {
@@ -92,7 +89,6 @@ module.exports = function runEventTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_e{10,12}:test title|another desc|h:host|#foo,bar');
-              server.close();
               done();
             });
           });
@@ -101,7 +97,7 @@ module.exports = function runEventTestSuite() {
             var called = false;
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               statsd.event('test title', 'another desc', null, ['foo', 'bar'], function () {
@@ -111,7 +107,6 @@ module.exports = function runEventTestSuite() {
             server.on('metrics', function (event) {
               assert.equal(event, '_e{10,12}:test title|another desc|#foo,bar');
               assert.equal(called, true);
-              server.close();
               done();
             });
           });
@@ -133,19 +128,12 @@ module.exports = function runEventTestSuite() {
 
                 assert.ok(!error);
                 assert.equal(bytes, 0);
-                // We should call finished() here, but we have to work around
-                // https://github.com/joyent/node/issues/2867 on node 0.6,
-                // such that we don't close the socket within the `listening` event
-                // and pass a single message through instead.
-                socket.send(buf, 0, buf.length, address.port, address.address, function () {
-                  socket.close();
-                });
+                socket.send(buf, 0, buf.length, address.port, address.address);
               });
             });
             server.on('metrics', function (message) {
               // We only expect to get our own test finished message, no stats
               assert.equal(message, TEST_FINISHED_MESSAGE);
-              server.close();
               done();
             });
           });
@@ -153,14 +141,13 @@ module.exports = function runEventTestSuite() {
           it('should throw an exception when using telegraf format', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 telegraf: true
               }, index);
               assert.throws(function () {
                 statsd.event('test title', 'another desc', null, ['foo', 'bar']);
               }, function (err) {
-                server.close();
                 done();
               });
             });
@@ -169,7 +156,7 @@ module.exports = function runEventTestSuite() {
           it('should use errorHandler', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 telegraf: true,
                 errorHandler: function () {
@@ -185,7 +172,7 @@ module.exports = function runEventTestSuite() {
           it('should send proper event format for title and text', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -193,7 +180,6 @@ module.exports = function runEventTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_e{4,11}:test|description\n');
-              server.close();
               done();
             });
           });
@@ -201,7 +187,7 @@ module.exports = function runEventTestSuite() {
           it('should reuse the title when when text is missing', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -209,7 +195,6 @@ module.exports = function runEventTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_e{4,4}:test|test\n');
-              server.close();
               done();
             });
           });
@@ -219,7 +204,7 @@ module.exports = function runEventTestSuite() {
             server = createTCPServer(function (address) {
               var options;
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -237,7 +222,6 @@ module.exports = function runEventTestSuite() {
               assert.equal(event, '_e{10,31}:test title|another\\nmultiline\\ndescription|d:' +
                 Math.round(date.getTime() / 1000) + '|h:host|k:ag_key|p:low|s:source_type|t:warning\n'
               );
-              server.close();
               done();
             });
           });
@@ -246,7 +230,7 @@ module.exports = function runEventTestSuite() {
             server = createTCPServer(function (address) {
               var options;
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -257,7 +241,6 @@ module.exports = function runEventTestSuite() {
             });
             server.on('metrics', function (event) {
               assert.equal(event, '_e{10,12}:test title|another desc|h:host|#foo,bar\n');
-              server.close();
               done();
             });
           });
@@ -266,7 +249,7 @@ module.exports = function runEventTestSuite() {
             var called = false;
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -277,7 +260,6 @@ module.exports = function runEventTestSuite() {
             server.on('metrics', function (event) {
               assert.equal(event, '_e{10,12}:test title|another desc|#foo,bar\n');
               assert.equal(called, true);
-              server.close();
               done();
             });
           });
@@ -304,19 +286,12 @@ module.exports = function runEventTestSuite() {
 
                 assert.ok(!error);
                 assert.equal(bytes, 0);
-                // We should call finished() here, but we have to work around
-                // https://github.com/joyent/node/issues/2867 on node 0.6,
-                // such that we don't close the socket within the `listening` event
-                // and pass a single message through instead.
-                socket.write(buf, 0, 'ascii', function () {
-                  socket.close();
-                });
+                socket.write(buf, 0, 'ascii');
               });
             });
             server.on('metrics', function (message) {
               // We only expect to get our own test finished message, no stats
               assert.equal(message, TEST_FINISHED_MESSAGE);
-              server.close();
               done();
             });
           });
@@ -324,7 +299,7 @@ module.exports = function runEventTestSuite() {
           it('should throw an exception when using telegraf format', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 telegraf: true,
                 protocol: 'tcp'
@@ -332,7 +307,6 @@ module.exports = function runEventTestSuite() {
               assert.throws(function () {
                 statsd.event('test title', 'another desc', null, ['foo', 'bar']);
               }, function (err) {
-                server.close();
                 done();
               });
             });
@@ -341,7 +315,7 @@ module.exports = function runEventTestSuite() {
           it('should use errorHandler', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 telegraf: true,
                 protocol: 'tcp',

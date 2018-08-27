@@ -22,7 +22,7 @@ module.exports = function runCloseMethodTestSuite() {
           it('should call callback after close call', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port
               }, index);
               statsd.close(function () {
@@ -35,7 +35,7 @@ module.exports = function runCloseMethodTestSuite() {
           it('should use errorHandler', function (done) {
             server = createUDPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 errorHandler: function (e) {
                   server.close();
@@ -54,7 +54,7 @@ module.exports = function runCloseMethodTestSuite() {
           it('should call callback after close call', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp'
               }, index);
@@ -68,7 +68,7 @@ module.exports = function runCloseMethodTestSuite() {
           it('should use errorHandler', function (done) {
             server = createTCPServer(function (address) {
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp',
                 errorHandler: function (e) {

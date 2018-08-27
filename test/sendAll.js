@@ -23,7 +23,7 @@ module.exports = function runSendAllMethodTestSuite() {
             server = createUDPServer(function (address) {
               var err = new Error('Boom!');
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 errorHandler: function (e) {
                   assert.equal(e, err);
@@ -46,7 +46,7 @@ module.exports = function runSendAllMethodTestSuite() {
             server = createTCPServer(function (address) {
               var err = new Error('Boom!');
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 protocol: 'tcp',
                 errorHandler: function (e) {
