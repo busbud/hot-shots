@@ -24,7 +24,7 @@ module.exports = function runSendMessageMethodTestSuite() {
             server = createUDPServer(function (address) {
               var err = new Error('Boom!');
               statsd = createStatsdClient({
-                host: address.address, 
+                host: address.address,
                 port: address.port,
                 errorHandler: function (e) {
                   assert.equal(e, err);
@@ -60,7 +60,7 @@ module.exports = function runSendMessageMethodTestSuite() {
           it('should throw for an unresolvable host', function (done) {
             var d = domain.create();
             statsd = createStatsdClient({ host: '...' });
-      
+
             d.add(statsd.socket);
             d.on('error', function (error) {
               assert.ok(error);
@@ -70,7 +70,7 @@ module.exports = function runSendMessageMethodTestSuite() {
               d.exit();
               done();
             });
-      
+
             d.run(function () { statsd.send('test title'); });
           });
         });
@@ -93,13 +93,16 @@ module.exports = function runSendMessageMethodTestSuite() {
             });
           });
 
-          it.skip('should errback for an unresolvable host', function () {
-            // This one blows up on socket.on('error') level and cannot be
-            // catched inside the statsd.send callback. This case is the
-            // same as above.
+          it('should errback for an unresolvable host', function (done) {
+            statsd = createStatsdClient({ host: '...' });
+            statsd.send('test title', [], function (error) {
+              assert.ok(error);
+              assert.equal(error.code, 'ENOTFOUND');
+              done();
+            });
           });
 
-          it('should use errorHandler for an unresolvable host', function (done) {           
+          it('should use errorHandler for an unresolvable host', function (done) {
             statsd = createStatsdClient({
               host: '...',
               protocol: 'tcp',
@@ -118,7 +121,7 @@ module.exports = function runSendMessageMethodTestSuite() {
               host: '...',
               protocol: 'tcp'
             });
-      
+
             d.add(statsd.socket);
             d.on('error', function (error) {
               assert.ok(error);
@@ -128,7 +131,7 @@ module.exports = function runSendMessageMethodTestSuite() {
               d.exit();
               done();
             });
-      
+
             d.run(function () { statsd.send('test title'); });
           });
         });
