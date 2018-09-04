@@ -5,6 +5,7 @@ var assert = require('assert');
 var createStatsdClient = require('./helpers').createStatsdClient;
 var createTCPServer = require('./helpers').createTCPServer;
 var createUDPServer = require('./helpers').createUDPServer;
+var closeAll = require('./helpers').closeAll;
 
 module.exports = function runBufferTestSuite() {
   describe('#buffer', function () {
@@ -12,8 +13,7 @@ module.exports = function runBufferTestSuite() {
     var statsd;
 
     afterEach(function () {
-      server = null;
-      statsd = null;
+      closeAll(server, statsd);
     });
 
     ['main client', 'child client', 'child of child client'].forEach(function (description, index) {

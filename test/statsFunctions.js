@@ -7,6 +7,7 @@ var net = require('net');
 var createStatsdClient = require('./helpers').createStatsdClient;
 var createTCPServer = require('./helpers').createTCPServer;
 var createUDPServer = require('./helpers').createUDPServer;
+var closeAll = require('./helpers').closeAll;
 
 module.exports = function runHistogramTestSuite() {
   describe('#statsFunctions', function () {
@@ -14,8 +15,7 @@ module.exports = function runHistogramTestSuite() {
     var statsd;
 
     afterEach(function () {
-      server = null;
-      statsd = null;
+      closeAll(server, statsd);
     });
 
     ['main client', 'child client', 'child of child client'].forEach(function (description, index) {
@@ -32,39 +32,37 @@ module.exports = function runHistogramTestSuite() {
                 ' format without prefix, suffix, sampling and callback', function (done) {
                 server = createUDPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                   }, index);
                   statsd[statFunction.name]('test', 42);
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'test:42|' + statFunction.unit);
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should send proper ' + statFunction.name + ' format with tags', function (done) {
                 server = createUDPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                   }, index);
                   statsd[statFunction.name]('test', 42, ['foo', 'bar']);
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'test:42|' + statFunction.unit + '|#foo,bar');
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should send proper ' + statFunction.name +
                 ' format with prefix, suffix, sampling and callback', function (done) {
                 var called = false;
                 server = createUDPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                     prefix: 'foo.',
                     suffix: '.bar'
@@ -76,17 +74,16 @@ module.exports = function runHistogramTestSuite() {
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'foo.test.bar:42|' + statFunction.unit + '|@0.5');
                   assert.equal(called, true);
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should properly send a and b with the same value', function (done) {
                 var called = 0;
                 var noOfMessages = 0;
                 server = createUDPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port
                   });
                   statsd[statFunction.name](['a', 'b'], 42, null, function (error, bytes) {
@@ -102,65 +99,56 @@ module.exports = function runHistogramTestSuite() {
                     noOfMessages += 1;
                   } else {
                     assert.equal(metric, 'b:42|' + statFunction.unit);
-                    server.close();
                     done();
                   }
                 });
               });
-    
+
               it('should send no ' + statFunction.name + ' stat when a mock Client is used', function (done) {
                 var TEST_FINISHED_MESSAGE = 'TEST_FINISHED';
                 server = createUDPServer(function (address) {
                   statsd = createStatsdClient([
                     address.address, address.port, 'prefix', 'suffix', false, false, true
                   ], index);
-    
+
                   // Regression test for "undefined is not a function" with missing
                   // callback on mock instance
                   statsd[statFunction.name]('test', 1);
-    
+
                   statsd[statFunction.name]('test', 1, null, function (error, bytes) {
                     var socket = dgram.createSocket("udp4");
                     var buf = new Buffer(TEST_FINISHED_MESSAGE);
-    
+
                     assert.ok(!error);
                     assert.equal(bytes, 0);
-                    // We should call finished() here, but we have to work around
-                    // https://github.com/joyent/node/issues/2867 on node 0.6,
-                    // such that we don't close the socket within the `listening` event
-                    // and pass a single message through instead.
-                    socket.send(buf, 0, buf.length, address.port, address.address, function () {
-                      socket.close();
-                    });
+                    socket.send(buf, 0, buf.length, address.port, address.address);
                   });
                 });
                 server.on('metrics', function (message) {
                   // We only expect to get our own test finished message, no stats
                   assert.equal(message, TEST_FINISHED_MESSAGE);
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should format tags to datadog format by default', function (done) {
                 server = createUDPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port
                   });
                   statsd[statFunction.name]('test', 42, {foo: 'bar'});
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'test:42|' + statFunction.unit + '|#foo:bar');
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should format tags when using telegraf format', function (done) {
                 server = createUDPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                     telegraf: true
                   });
@@ -168,7 +156,6 @@ module.exports = function runHistogramTestSuite() {
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'test,foo=bar:42|' + statFunction.unit);
-                  server.close();
                   done();
                 });
               });
@@ -179,7 +166,7 @@ module.exports = function runHistogramTestSuite() {
                 ' format without prefix, suffix, sampling and callback', function (done) {
                 server = createTCPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                     protocol: 'tcp'
                   }, index);
@@ -187,15 +174,14 @@ module.exports = function runHistogramTestSuite() {
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'test:42|' + statFunction.unit + '\n');
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should send proper ' + statFunction.name + ' format with tags', function (done) {
                 server = createTCPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                     protocol: 'tcp'
                   }, index);
@@ -203,17 +189,16 @@ module.exports = function runHistogramTestSuite() {
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'test:42|' + statFunction.unit + '|#foo,bar\n');
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should send proper ' + statFunction.name +
                 ' format with prefix, suffix, sampling and callback', function (done) {
                 var called = false;
                 server = createTCPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                     prefix: 'foo.',
                     suffix: '.bar',
@@ -226,16 +211,15 @@ module.exports = function runHistogramTestSuite() {
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'foo.test.bar:42|' + statFunction.unit + '|@0.5\n');
                   assert.equal(called, true);
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should properly send a and b with the same value', function (done) {
                 var called = 0;
                 server = createTCPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                     protocol: 'tcp'
                   });
@@ -248,11 +232,10 @@ module.exports = function runHistogramTestSuite() {
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'a:42|' + statFunction.unit + '\nb:42|' + statFunction.unit + '\n');
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should send no ' + statFunction.unit + ' stat when a mock Client is used', function (done) {
                 var TEST_FINISHED_MESSAGE = 'TEST_FINISHED';
                 server = createTCPServer(function (address) {
@@ -264,38 +247,31 @@ module.exports = function runHistogramTestSuite() {
                     mock: true,
                     protocol: 'tcp'
                   }, index);
-    
+
                   // Regression test for "undefined is not a function" with missing
                   // callback on mock instance
                   statsd[statFunction.name]('test', 1);
-    
+
                   statsd[statFunction.name]('test', 1, null, function (error, bytes) {
                     var socket = net.connect(address.port, address.address);
                     var buf = new Buffer(TEST_FINISHED_MESSAGE);
-    
+
                     assert.ok(!error);
                     assert.equal(bytes, 0);
-                    // We should call finished() here, but we have to work around
-                    // https://github.com/joyent/node/issues/2867 on node 0.6,
-                    // such that we don't close the socket within the `listening` event
-                    // and pass a single message through instead.
-                    socket.write(buf, 0, 'ascii', function () {
-                      socket.close();
-                    });
+                    socket.write(buf, 0, 'ascii');
                   });
                 });
                 server.on('metrics', function (message) {
                   // We only expect to get our own test finished message, no stats
                   assert.equal(message, TEST_FINISHED_MESSAGE);
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should format tags to datadog format by default', function (done) {
                 server = createTCPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                     protocol: 'tcp'
                   });
@@ -303,15 +279,14 @@ module.exports = function runHistogramTestSuite() {
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'test:42|' + statFunction.unit + '|#foo:bar\n');
-                  server.close();
                   done();
                 });
               });
-    
+
               it('should format tags when using telegraf format', function (done) {
                 server = createTCPServer(function (address) {
                   statsd = createStatsdClient({
-                    host: address.address, 
+                    host: address.address,
                     port: address.port,
                     telegraf: true,
                     protocol: 'tcp'
@@ -320,7 +295,6 @@ module.exports = function runHistogramTestSuite() {
                 });
                 server.on('metrics', function (metrics) {
                   assert.equal(metrics, 'test,foo=bar:42|' + statFunction.unit + '\n');
-                  server.close();
                   done();
                 });
               });
@@ -333,14 +307,13 @@ module.exports = function runHistogramTestSuite() {
             it('should send count by 1 when no params are specified', function (done) {
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                 }, index);
                 statsd.increment('test');
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:1|c');
-                server.close();
                 done();
               });
             });
@@ -348,14 +321,13 @@ module.exports = function runHistogramTestSuite() {
             it('should use when increment is 0', function (done) {
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                 }, index);
                 statsd.increment('test', 0);
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:0|c');
-                server.close();
                 done();
               });
             });
@@ -363,14 +335,13 @@ module.exports = function runHistogramTestSuite() {
             it('should send proper count format with tags', function (done) {
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                 }, index);
                 statsd.increment('test', 42, ['foo', 'bar']);
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:42|c|#foo,bar');
-                server.close();
                 done();
               });
             });
@@ -378,14 +349,13 @@ module.exports = function runHistogramTestSuite() {
             it('should send default count 1 with tags', function (done) {
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                 }, index);
                 statsd.increment('test', ['foo', 'bar']);
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:1|c|#foo,bar');
-                server.close();
                 done();
               });
             });
@@ -393,14 +363,13 @@ module.exports = function runHistogramTestSuite() {
             it('should send tags when sampleRate is omitted', function (done) {
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                 }, index);
                 statsd.increment('test', 23, ['foo', 'bar']);
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:23|c|#foo,bar');
-                server.close();
                 done();
               });
             });
@@ -409,7 +378,7 @@ module.exports = function runHistogramTestSuite() {
               var called = false;
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   prefix: 'foo.',
                   suffix: '.bar'
@@ -421,7 +390,6 @@ module.exports = function runHistogramTestSuite() {
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'foo.test.bar:42|c|@0.5');
                 assert.equal(called, true);
-                server.close();
                 done();
               });
             });
@@ -431,7 +399,7 @@ module.exports = function runHistogramTestSuite() {
               var noOfMessages = 0;
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port
                 });
                 statsd.increment(['a', 'b'], null, function (error, bytes) {
@@ -447,7 +415,6 @@ module.exports = function runHistogramTestSuite() {
                   noOfMessages += 1;
                 } else {
                   assert.equal(metric, 'b:1|c');
-                  server.close();
                   done();
                 }
               });
@@ -459,30 +426,23 @@ module.exports = function runHistogramTestSuite() {
                 statsd = createStatsdClient([
                   address.address, address.port, 'prefix', 'suffix', false, false, true
                 ], index);
-  
+
                 // Regression test for "undefined is not a function" with missing
                 // callback on mock instance
                 statsd.increment('test', 1);
-  
+
                 statsd.increment('test', 1, null, function (error, bytes) {
                   var socket = dgram.createSocket("udp4");
                   var buf = new Buffer(TEST_FINISHED_MESSAGE);
-  
+
                   assert.ok(!error);
                   assert.equal(bytes, 0);
-                  // We should call finished() here, but we have to work around
-                  // https://github.com/joyent/node/issues/2867 on node 0.6,
-                  // such that we don't close the socket within the `listening` event
-                  // and pass a single message through instead.
-                  socket.send(buf, 0, buf.length, address.port, address.address, function () {
-                    socket.close();
-                  });
+                  socket.send(buf, 0, buf.length, address.port, address.address);
                 });
               });
               server.on('metrics', function (message) {
                 // We only expect to get our own test finished message, no stats
                 assert.equal(message, TEST_FINISHED_MESSAGE);
-                server.close();
                 done();
               });
             });
@@ -492,7 +452,7 @@ module.exports = function runHistogramTestSuite() {
             it('should send count by 1 when no params are specified', function (done) {
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 }, index);
@@ -500,7 +460,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:1|c\n');
-                server.close();
                 done();
               });
             });
@@ -508,7 +467,7 @@ module.exports = function runHistogramTestSuite() {
             it('should use when increment is 0', function (done) {
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 }, index);
@@ -516,7 +475,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:0|c\n');
-                server.close();
                 done();
               });
             });
@@ -524,7 +482,7 @@ module.exports = function runHistogramTestSuite() {
             it('should send proper count format with tags', function (done) {
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 }, index);
@@ -532,7 +490,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:42|c|#foo,bar\n');
-                server.close();
                 done();
               });
             });
@@ -540,7 +497,7 @@ module.exports = function runHistogramTestSuite() {
             it('should send default count 1 with tags', function (done) {
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 }, index);
@@ -548,7 +505,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:1|c|#foo,bar\n');
-                server.close();
                 done();
               });
             });
@@ -556,7 +512,7 @@ module.exports = function runHistogramTestSuite() {
             it('should send tags when sampleRate is omitted', function (done) {
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 }, index);
@@ -564,7 +520,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:23|c|#foo,bar\n');
-                server.close();
                 done();
               });
             });
@@ -573,7 +528,7 @@ module.exports = function runHistogramTestSuite() {
               var called = false;
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   prefix: 'foo.',
                   suffix: '.bar',
@@ -586,7 +541,6 @@ module.exports = function runHistogramTestSuite() {
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'foo.test.bar:42|c|@0.5\n');
                 assert.equal(called, true);
-                server.close();
                 done();
               });
             });
@@ -595,7 +549,7 @@ module.exports = function runHistogramTestSuite() {
               var called = 0;
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 });
@@ -608,7 +562,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'a:42|c\nb:42|c\n');
-                server.close();
                 done();
               });
             });
@@ -624,30 +577,23 @@ module.exports = function runHistogramTestSuite() {
                   mock: true,
                   protocol: 'tcp'
                 }, index);
-  
+
                 // Regression test for "undefined is not a function" with missing
                 // callback on mock instance
                 statsd.increment('test', 1);
-  
+
                 statsd.increment('test', 1, null, function (error, bytes) {
                   var socket = net.connect(address.port, address.address);
                   var buf = new Buffer(TEST_FINISHED_MESSAGE);
-  
+
                   assert.ok(!error);
                   assert.equal(bytes, 0);
-                  // We should call finished() here, but we have to work around
-                  // https://github.com/joyent/node/issues/2867 on node 0.6,
-                  // such that we don't close the socket within the `listening` event
-                  // and pass a single message through instead.
-                  socket.write(buf, 0, 'ascii', function () {
-                    socket.close();
-                  });
+                  socket.write(buf, 0, 'ascii');
                 });
               });
               server.on('metrics', function (message) {
                 // We only expect to get our own test finished message, no stats
                 assert.equal(message, TEST_FINISHED_MESSAGE);
-                server.close();
                 done();
               });
             });
@@ -659,14 +605,13 @@ module.exports = function runHistogramTestSuite() {
             it('should send count by -1 when no params are specified', function (done) {
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                 }, index);
                 statsd.decrement('test');
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:-1|c');
-                server.close();
                 done();
               });
             });
@@ -674,14 +619,13 @@ module.exports = function runHistogramTestSuite() {
             it('should send proper count format with tags', function (done) {
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                 }, index);
                 statsd.decrement('test', 42, ['foo', 'bar']);
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:-42|c|#foo,bar');
-                server.close();
                 done();
               });
             });
@@ -690,7 +634,7 @@ module.exports = function runHistogramTestSuite() {
               var called = false;
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   prefix: 'foo.',
                   suffix: '.bar'
@@ -702,7 +646,6 @@ module.exports = function runHistogramTestSuite() {
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'foo.test.bar:-42|c|@0.5');
                 assert.equal(called, true);
-                server.close();
                 done();
               });
             });
@@ -712,7 +655,7 @@ module.exports = function runHistogramTestSuite() {
               var noOfMessages = 0;
               server = createUDPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port
                 });
                 statsd.decrement(['a', 'b'], null, function (error, bytes) {
@@ -728,7 +671,6 @@ module.exports = function runHistogramTestSuite() {
                   noOfMessages += 1;
                 } else {
                   assert.equal(metric, 'b:-1|c');
-                  server.close();
                   done();
                 }
               });
@@ -740,30 +682,23 @@ module.exports = function runHistogramTestSuite() {
                 statsd = createStatsdClient([
                   address.address, address.port, 'prefix', 'suffix', false, false, true
                 ], index);
-  
+
                 // Regression test for "undefined is not a function" with missing
                 // callback on mock instance
                 statsd.decrement('test', 1);
-  
+
                 statsd.decrement('test', 1, null, function (error, bytes) {
                   var socket = dgram.createSocket("udp4");
                   var buf = new Buffer(TEST_FINISHED_MESSAGE);
-  
+
                   assert.ok(!error);
                   assert.equal(bytes, 0);
-                  // We should call finished() here, but we have to work around
-                  // https://github.com/joyent/node/issues/2867 on node 0.6,
-                  // such that we don't close the socket within the `listening` event
-                  // and pass a single message through instead.
-                  socket.send(buf, 0, buf.length, address.port, address.address, function () {
-                    socket.close();
-                  });
+                  socket.send(buf, 0, buf.length, address.port, address.address);
                 });
               });
               server.on('metrics', function (message) {
                 // We only expect to get our own test finished message, no stats
                 assert.equal(message, TEST_FINISHED_MESSAGE);
-                server.close();
                 done();
               });
             });
@@ -773,7 +708,7 @@ module.exports = function runHistogramTestSuite() {
             it('should send count by -1 when no params are specified', function (done) {
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 }, index);
@@ -781,7 +716,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:-1|c\n');
-                server.close();
                 done();
               });
             });
@@ -789,7 +723,7 @@ module.exports = function runHistogramTestSuite() {
             it('should send proper count format with tags', function (done) {
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 }, index);
@@ -797,7 +731,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'test:-42|c|#foo,bar\n');
-                server.close();
                 done();
               });
             });
@@ -806,7 +739,7 @@ module.exports = function runHistogramTestSuite() {
               var called = false;
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   prefix: 'foo.',
                   suffix: '.bar',
@@ -819,7 +752,6 @@ module.exports = function runHistogramTestSuite() {
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'foo.test.bar:-42|c|@0.5\n');
                 assert.equal(called, true);
-                server.close();
                 done();
               });
             });
@@ -828,7 +760,7 @@ module.exports = function runHistogramTestSuite() {
               var called = 0;
               server = createTCPServer(function (address) {
                 statsd = createStatsdClient({
-                  host: address.address, 
+                  host: address.address,
                   port: address.port,
                   protocol: 'tcp'
                 });
@@ -841,7 +773,6 @@ module.exports = function runHistogramTestSuite() {
               });
               server.on('metrics', function (metrics) {
                 assert.equal(metrics, 'a:-42|c\nb:-42|c\n');
-                server.close();
                 done();
               });
             });
@@ -857,30 +788,23 @@ module.exports = function runHistogramTestSuite() {
                   mock: true,
                   protocol: 'tcp'
                 }, index);
-  
+
                 // Regression test for "undefined is not a function" with missing
                 // callback on mock instance
                 statsd.decrement('test', 1);
-  
+
                 statsd.decrement('test', 1, null, function (error, bytes) {
                   var socket = net.connect(address.port, address.address);
                   var buf = new Buffer(TEST_FINISHED_MESSAGE);
-  
+
                   assert.ok(!error);
                   assert.equal(bytes, 0);
-                  // We should call finished() here, but we have to work around
-                  // https://github.com/joyent/node/issues/2867 on node 0.6,
-                  // such that we don't close the socket within the `listening` event
-                  // and pass a single message through instead.
-                  socket.write(buf, 0, 'ascii', function () {
-                    socket.close();
-                  });
+                  socket.write(buf, 0, 'ascii');
                 });
               });
               server.on('metrics', function (message) {
                 // We only expect to get our own test finished message, no stats
                 assert.equal(message, TEST_FINISHED_MESSAGE);
-                server.close();
                 done();
               });
             });
