@@ -34,9 +34,6 @@
     "lint": "jshint lib/**.js test/**.js",
     "pretest": "npm run lint"
   },
-  "dependencies": {
-    "longjohn": "^0.2.12"
-  },
   "devDependencies": {
     "jshint": "2.x",
     "mocha": "2.x",

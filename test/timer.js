@@ -8,6 +8,8 @@ var createStatsdClient = require('./helpers').createStatsdClient;
 var createTCPServer = require('./helpers').createTCPServer;
 var createUDPServer = require('./helpers').createUDPServer;
 
+var TIMER_BUFFER = 250;
+
 module.exports = function runTimerTestSuite() {
   describe('#timer', function () {
     var server;
@@ -117,7 +119,7 @@ module.exports = function runTimerTestSuite() {
       var timeFromStatLine = statsd.mockBuffer[0].match(/blah:(\d+\.\d+)\|/)[1];
 
       assert.ok(timeFromStatLine >= 100);
-      assert.ok(timeFromStatLine < 200);
+      assert.ok(timeFromStatLine < (100 + TIMER_BUFFER));
     });
 
     it('should record "user time" of promise', function () {
@@ -136,7 +138,7 @@ module.exports = function runTimerTestSuite() {
 
         assert.equal(name, 'name-thingy');
         assert.ok(parseFloat(time) >= 100);
-        assert.ok(parseFloat(time) < 200);
+        assert.ok(parseFloat(time) < (100 + TIMER_BUFFER));
       });
     });
   });
