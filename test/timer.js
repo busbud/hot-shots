@@ -119,7 +119,7 @@ module.exports = function runTimerTestSuite() {
       var timeFromStatLine = statsd.mockBuffer[0].match(/blah:(\d+\.\d+)\|/)[1];
 
       console.log(timeFromStatLine);
-      assert.ok(timeFromStatLine >= 100);
+      assert.ok(timeFromStatLine >= 99);
       assert.ok(timeFromStatLine < (100 + TIMER_BUFFER));
     });
 
@@ -140,7 +140,7 @@ module.exports = function runTimerTestSuite() {
         assert.equal(name, 'name-thingy');
 
         console.log(parseFloat(time));
-        assert.ok(parseFloat(time) >= 100);
+        assert.ok(parseFloat(time) >= 99);
         assert.ok(parseFloat(time) < (100 + TIMER_BUFFER));
       });
     });
