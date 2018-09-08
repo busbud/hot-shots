@@ -7,6 +7,7 @@ var StatsD = require('../lib/statsd');
 var createStatsdClient = require('./helpers').createStatsdClient;
 var createTCPServer = require('./helpers').createTCPServer;
 var createUDPServer = require('./helpers').createUDPServer;
+var closeAll = require('./helpers').closeAll;
 
 module.exports = function runChildClientTestSuite() {
   describe('#childClient', function () {
@@ -14,8 +15,7 @@ module.exports = function runChildClientTestSuite() {
     var statsd;
 
     afterEach(function () {
-      server = null;
-      statsd = null;
+      closeAll(server, statsd);
     });
 
     describe('#init', function () {
@@ -55,7 +55,6 @@ module.exports = function runChildClientTestSuite() {
           });
           server.on('metrics', function (metrics) {
             assert.equal(metrics, 'preff.a.suff:1|c|#awesomeness:over9000\npreff.b.suff:2|c|#awesomeness:over9000\n');
-            server.close();
             done();
           });
         });
@@ -81,7 +80,6 @@ module.exports = function runChildClientTestSuite() {
             assert.equal(metrics, 'preff.p.a.s.suff:1|c|#xyz,awesomeness:' +
               'over9000\npreff.p.b.s.suff:2|c|#xyz,awesomeness:over9000\n'
             );
-            server.close();
             done();
           });
         });
@@ -105,7 +103,6 @@ module.exports = function runChildClientTestSuite() {
           });
           server.on('metrics', function (metrics) {
             assert.equal(metrics, 'preff.a.suff:1|c|#awesomeness:over9000\npreff.b.suff:2|c|#awesomeness:over9000\n');
-            server.close();
             done();
           });
         });
@@ -132,7 +129,6 @@ module.exports = function runChildClientTestSuite() {
             assert.equal(metrics, 'preff.p.a.s.suff:1|c|#xyz,awesomeness:' +
               'over9000\npreff.p.b.s.suff:2|c|#xyz,awesomeness:over9000\n'
             );
-            server.close();
             done();
           });
         });
