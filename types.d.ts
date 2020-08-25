@@ -1,4 +1,5 @@
 import dgram = require("dgram");
+import net = require("net");
 
 declare module "hot-shots" {
   export type Tags = { [key: string]: string } | string[];
@@ -20,6 +21,7 @@ declare module "hot-shots" {
     suffix?: string;
     telegraf?: boolean;
     useDefaultRoute?: boolean;
+    lookup?: net.LookupFunction;
   }
 
   export interface ChildClientOptions {
